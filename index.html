@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Backtesting Website</title>
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            margin: 0;
+            padding: 0;
+            background: #121212;
+            color: #ffffff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 800px;
+            width: 100%;
+            padding: 20px;
+            background: #1e1e1e;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+        h1 {
+            text-align: center;
+            color: #00bcd4;
+            margin-bottom: 20px;
+        }
+        .tab {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+        .tab button {
+            flex: 1;
+            padding: 10px;
+            background: #333;
+            border: none;
+            color: #ffffff;
+            cursor: pointer;
+            transition: background 0.3s;
+            border-radius: 5px;
+            margin-right: 5px;
+        }
+        .tab button:last-child {
+            margin-right: 0;
+        }
+        .tab button.active {
+            background: #00bcd4;
+        }
+        .content {
+            display: none;
+            padding: 20px;
+            overflow-y: auto;
+            height: calc(100vh - 200px); /* Adjust as needed */
+        }
+        .content.active {
+            display: block;
+        }
+        .input-group {
+            margin-bottom: 15px;
+        }
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        .input-group input, .input-group select {
+            width: calc(100% - 20px);
+            padding: 10px;
+            margin-bottom: 10px;
+            border: none;
+            background: #333;
+            color: #ffffff;
+            border-radius: 5px;
+        }
+        button {
+            padding: 10px;
+            width: calc(50% - 10px);
+            margin: 5px;
+            background: #00bcd4;
+            border: none;
+            color: #ffffff;
+            cursor: pointer;
+            transition: background 0.3s;
+            border-radius: 5px;
+        }
+        button:hover {
+            background: #0097a7;
+        }
+        .trade-list {
+            display: flex;
+            flex-direction: column;
+        }
+        .trade-item {
+            background: #333;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .trade-item .close-icon {
+            margin-left: 10px;
+            cursor: pointer;
+            color: #ff5252;
+        }
+        .popup {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            justify-content: center;
+            align-items: center;
+        }
+        .popup-content {
+            background: #1e1e1e;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+        .partial-popup {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            justify-content: center;
+            align-items: center;
+        }
+        .partial-popup-content {
+            background: #1e1e1e;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+        .analytics {
+            margin-top: 20px;
+        }
+        .analytics p {
+            margin: 10px 0;
+        }
+        table {
+            width: 100%;
+            margin-top: 20px;
+            border-collapse: collapse;
+            background-color: #333;
+            color: #ffffff;
+        }
+        table, th, td {
+            border: 1px solid #ffffff;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Backtesting Website</h1>
+        <div class="tab">
+            <button class="tablink active" onclick="openTab('input')">Input</button>
+            <button class="tablink" onclick="openTab('analytics')">Analytics</button>
+        </div>
+        <div id="input" class="content active">
+            <div class="input-group">
+                <label for="strategy">Strategy</label>
+                <input type="text" id="strategy">
+            </div>
+            <div class="input-group">
+                <label for="tp">Take Profit (TP)</label>
+                <input type="number" id="tp">
+            </div>
+            <div class="input-group">
+                <label for="sl">Stop Loss (SL)</label>
+                <input type="number" id="sl">
+            </div>
+            <button onclick="addTrade()">Add Trade</button>
+            <h2>Pending Trades</h2>
+            <div class="trade-list" id="pendingTrades"></div>
+            <button onclick="resetTrades()">Reset Trades</button>
+            <button onclick="undoLastMove()">Undo Last Move</button>
+        </div>
+        <div id="analytics" class="content">
+            <h2>Analytics</h2>
+            <div class="input-group">
+                <label for="strategySelect">Select Strategy</label>
+                <select id="strategySelect" onchange="showAnalytics()">
+                    <option value="all">All</option>
+                    <!-- Options will be dynamically added via JavaScript -->
+                </select>
+            </div>
+            <div class="analytics" id="analyticsData">
+                <!-- Analytics data will be displayed dynamically via JavaScript -->
+            </div>
+            <h2>All Trades</h2>
+            <table id="allTradesTable">
+                <thead>
+                    <tr>
+                        <th>Strategy</th>
+                        <th>TP</th>
+                        <th>SL</th>
+                        <th>Status</th>
+                        <th>Partial Amount</th>
+                    </tr>
+                </thead>
+                <tbody id="allTradesBody">
+                    <!-- Table rows will be dynamically added via JavaScript -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="popup" class="popup">
+        <div class="popup-content">
+            <h2>Confirm Trade Close</h2>
+            <p>Are you sure you want to close this trade?</p>
+            <button onclick="confirmClose('tp')">TP</button>
+            <button onclick="confirmClose('sl')">SL</button>
+            <button onclick="openPartialPopup()">Partials</button>
+            <button onclick="confirmClose('breakeven')">Breakeven</button>
+            <button onclick="closePopup()">Cancel</button>
+        </div>
+    </div>
+    <div id="partialPopup" class="partial-popup">
+        <div class="partial-popup-content">
+            <h2>Partials</h2>
+            <p>Enter partial amount:</p>
+            <input type="number" id="partialAmount" placeholder="Partial Amount">
+            <button onclick="confirmPartial()">Confirm</button>
+            <button onclick="closePartialPopup()">Cancel</button>
+        </div>
+    </div>
+
+    <script>
+        let trades = JSON.parse(localStorage.getItem('trades')) || { pending: [], confirmed: [] };
+        let closingTradeIndex = null;
+        let lastMove = null;
+        let strategies = new Set([...trades.pending, ...trades.confirmed].map(trade => trade.strategy));
+
+        document.addEventListener('DOMContentLoaded', () => {
+            updatePendingTrades();
+            updateStrategySelect();
+        });
+
+        function openTab(tabName) {
+            document.querySelectorAll('.content').forEach(content => content.classList.remove('active'));
+            document.querySelector(`#${tabName}`).classList.add('active');
+            document.querySelectorAll('.tablink').forEach(tab => tab.classList.remove('active'));
+            document.querySelector(`.tablink[onclick="openTab('${tabName}')"]`).classList.add('active');
+            if (tabName === 'analytics') showAnalytics();
+        }
+
+        function addTrade() {
+            const strategy = document.getElementById('strategy').value.trim();
+            const tp = document.getElementById('tp').value;
+            const sl = document.getElementById('sl').value;
+            
+            if (strategy && tp && sl) {
+                const trade = { strategy, tp, sl, status: 'pending' };
+                trades.pending.push(trade);
+                localStorage.setItem('trades', JSON.stringify(trades));
+                updatePendingTrades();
+                updateStrategySelect();
+                document.getElementById('strategy').value = '';
+                document.getElementById('tp').value = '';
+                document.getElementById('sl').value = '';
+            } else {
+                alert('Please fill out all fields.');
+            }
+        }
+
+        function updatePendingTrades() {
+            const pendingTradesDiv = document.getElementById('pendingTrades');
+            pendingTradesDiv.innerHTML = '';
+            trades.pending.forEach((trade, index) => {
+                const tradeItem = document.createElement('div');
+                tradeItem.classList.add('trade-item');
+                tradeItem.innerHTML = `
+                    <span>${trade.strategy} - TP: ${trade.tp}, SL: ${trade.sl}</span>
+                    <span class="close-icon" onclick="openClosePopup(${index})">&times;</span>
+                `;
+                pendingTradesDiv.appendChild(tradeItem);
+            });
+        }
+
+        function openClosePopup(index) {
+            closingTradeIndex = index;
+            document.getElementById('popup').style.display = 'flex';
+        }
+
+        function confirmClose(type) {
+            const trade = trades.pending[closingTradeIndex];
+            trade.status = type;
+            if (type === 'partials') {
+                document.getElementById('partialPopup').style.display = 'flex';
+            } else {
+                updatePendingTrades();
+                moveTradeToConfirmed(trade); // Move trade to confirmed trades
+                updateAllTradesTable(); // Update all trades table after closing a trade
+                closePopup();
+            }
+            lastMove = { type, trade };
+        }
+
+        function openPartialPopup() {
+            document.getElementById('popup').style.display = 'none';
+            document.getElementById('partialPopup').style.display = 'flex';
+        }
+
+        function confirmPartial() {
+            const partialAmount = document.getElementById('partialAmount').value.trim();
+            if (partialAmount) {
+                lastMove.trade.partialAmount = Number(partialAmount);
+                lastMove.trade.status = 'partials';
+                updatePendingTrades();
+                updateAllTradesTable(); // Update all trades table after closing a trade
+                closePartialPopup();
+            } else {
+                alert('Please enter a partial amount.');
+            }
+        }
+
+        function closePopup() {
+            closingTradeIndex = null;
+            document.getElementById('popup').style.display = 'none';
+        }
+
+        function closePartialPopup() {
+            document.getElementById('partialPopup').style.display = 'none';
+            closePopup();
+        }
+
+        function resetTrades() {
+            trades = { pending: [], confirmed: [] };
+            localStorage.removeItem('trades');
+            updatePendingTrades();
+            updateAllTradesTable(); // Update all trades table after resetting trades
+            updateStrategySelect();
+        }
+
+        function undoLastMove() {
+            if (!lastMove) {
+                alert('No moves to undo.');
+                return;
+            }
+            const { type, trade } = lastMove;
+            if (type === 'partials') {
+                delete trade.partialAmount;
+                trade.status = 'pending';
+            } else {
+                trade.status = 'pending';
+            }
+            updatePendingTrades();
+            updateAllTradesTable(); // Update all trades table after undoing last move
+            lastMove = null;
+        }
+
+        function moveTradeToConfirmed(trade) {
+            trades.pending = trades.pending.filter(t => t !== trade);
+            trades.confirmed.push(trade);
+            localStorage.setItem('trades', JSON.stringify(trades));
+        }
+function showAnalytics() {
+    const strategySelect = document.getElementById('strategySelect').value;
+    const analyticsData = document.getElementById('analyticsData');
+
+    const filteredTrades = (strategySelect === 'all' ? trades.pending.concat(trades.confirmed) : trades.pending.concat(trades.confirmed).filter(trade => trade.strategy === strategySelect)) || [];
+
+    const totalTrades = filteredTrades.length;
+    const winningTrades = filteredTrades.filter(trade => trade.status === 'tp').length;
+    const losingTrades = filteredTrades.filter(trade => trade.status === 'sl').length;
+    const breakevenTrades = filteredTrades.filter(trade => trade.status === 'breakeven').length;
+    const partialTrades = filteredTrades.filter(trade => trade.status === 'partials').length;
+    const winRate = totalTrades > 0 ? ((winningTrades / totalTrades) * 100).toFixed(2) : 0;
+    const profitFactor = losingTrades > 0 ? (winningTrades / losingTrades).toFixed(2) : winningTrades.toFixed(2);
+
+    analyticsData.innerHTML = `
+        <p>Total Trades: ${totalTrades}</p>
+        <p>Winning Trades: ${winningTrades}</p>
+        <p>Losing Trades: ${losingTrades}</p>
+        <p>Breakeven Trades: ${breakevenTrades}</p>
+        <p>Partial Trades: ${partialTrades}</p>
+        <p>Win Rate: ${winRate}%</p>
+        <p>Profit Factor: ${profitFactor}</p>
+    `;
+
+    updateAllTradesTable(); // Ensure the table is also updated here
+}
+
+        function updateAllTradesTable() {
+            const allTradesBody = document.getElementById('allTradesBody');
+            allTradesBody.innerHTML = ''; // Clear previous rows
+
+            trades.pending.forEach((trade) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${trade.strategy}</td>
+                    <td>${trade.tp}</td>
+                    <td>${trade.sl}</td>
+                    <td>${trade.status}</td>
+                    <td>${trade.partialAmount ? trade.partialAmount : '-'}</td>
+                `;
+                allTradesBody.appendChild(row);
+            });
+
+            trades.confirmed.forEach((trade) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${trade.strategy}</td>
+                    <td>${trade.tp}</td>
+                    <td>${trade.sl}</td>
+                    <td>${trade.status}</td>
+                    <td>${trade.partialAmount ? trade.partialAmount : '-'}</td>
+                `;
+                allTradesBody.appendChild(row);
+            });
+        }
+
+        function updateStrategySelect() {
+            const strategySelect = document.getElementById('strategySelect');
+            strategySelect.innerHTML = `<option value="all">All</option>`;
+            strategies.forEach(strategy => {
+                strategySelect.innerHTML += `<option value="${strategy}">${strategy}</option>`;
+            });
+        }
+    </script>
+</body>
+</html>
